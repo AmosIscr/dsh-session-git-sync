@@ -70,6 +70,10 @@ function mockContext(initialSessions, cwd) {
     },
     sessions: {
       get: () => undefined,
+      // Mirrors SessionStore.prepare(meta): the header carries the installed format version.
+      prepare(id) {
+        return { header: { version: 4, id, createdAt: Date.now(), isSeeded: false } }
+      },
     },
     sessionPersistence: {
       async list() {
@@ -207,6 +211,8 @@ test('host route pushes from one context and pulls into another', async () => {
     const pulled = await json(await target.request('pull', { mode: 'sessions', sessionIds: ['session-route'] }))
     assert.equal(pulled.ok, true)
     assert.equal(pulled.imported, 1)
+    assert.equal(pulled.localFormatVersion, 4)
+    assert.equal(pulled.formatMismatches, 0)
     assert.equal(target.records.get('session-route').events.length, 2)
     assert.deepEqual(target.workspace.sessionIds, ['session-route'])
     assert.equal(target.events.some((event) => event.name === 'api-session/added'), true)
@@ -214,6 +220,57 @@ test('host route pushes from one context and pulls into another', async () => {
     const secondStatus = await json(await target.request('status'))
     assert.equal(secondStatus.sessions.length, 1)
     assert.equal(secondStatus.config.lastPullAt !== null, true)
+  } finally {
+    if (oldHome === undefined) delete process.env.DSH_HOME
+    else process.env.DSH_HOME = oldHome
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('pulling a Session written by another format version is refused before it is stored', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-sgs-format-'))
+  const oldHome = process.env.DSH_HOME
+  try {
+    process.env.DSH_HOME = join(root, 'home')
+    const bare = join(root, 'remote.git')
+    const cwd = join(root, 'workspace')
+    await mkdir(cwd, { recursive: true })
+    const init = await runGit(['init', '--bare', '-b', 'main', bare], { cwd: root })
+    assert.equal(init.code, 0, init.stderr)
+
+    // The publishing computer already runs a newer DSH: its Session log format is v5.
+    const newer = fakeSession('session-future', cwd)
+    newer.header.version = 5
+    const publisher = mockContext([newer], cwd)
+    apply(publisher.ctx)
+    const saved = await json(await publisher.request('saveConfig', {
+      remote: bare,
+      branch: 'main',
+      authorName: 'Format Test',
+      authorEmail: 'format@example.com',
+    }))
+    assert.equal(saved.ok, true)
+    const pushed = await json(await publisher.request('push', { mode: 'sessions', sessionIds: ['session-future'] }))
+    assert.equal(pushed.ok, true)
+    assert.equal(pushed.sessionCount, 1)
+
+    // This computer writes v4 and starts from an empty store: a probe answers for it.
+    const target = mockContext([], cwd)
+    apply(target.ctx)
+    const status = await json(await target.request('status'))
+    assert.equal(status.localFormatVersion, 4)
+
+    const pulled = await json(await target.request('pull', { mode: 'sessions', sessionIds: ['session-future'] }))
+    assert.equal(pulled.ok, true)
+    assert.equal(pulled.imported, 0)
+    assert.equal(pulled.updated, 0)
+    assert.equal(pulled.errors, 1)
+    assert.equal(pulled.formatMismatches, 1)
+    assert.equal(pulled.sessions[0].code, 'format-version-mismatch')
+    assert.match(pulled.sessions[0].error, /v5/u)
+    assert.match(pulled.sessions[0].error, /v4/u)
+    assert.equal(target.records.has('session-future'), false)
+    assert.deepEqual(target.workspace.sessionIds, [])
   } finally {
     if (oldHome === undefined) delete process.env.DSH_HOME
     else process.env.DSH_HOME = oldHome

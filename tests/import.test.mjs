@@ -90,6 +90,8 @@ function createMock(sessions, workspacePath = 'C:\\work\\demo') {
         }
       },
       async create(header, options = {}) {
+        // Mirrors the JSONL backend: only the installed format can be written.
+        if (header.version !== 4) throw new Error('encodeCurrent requires Session format v4')
         assert.equal(records.has(header.id), false)
         const record = { header, inheritedEventCount: options.inheritedEventCount ?? 0, events: [] }
         records.set(header.id, record)
@@ -139,7 +141,7 @@ test('export writes a portable payload and import reconstructs it', async () => 
       header: source.header,
       events: source.events,
       inheritedEventCount: 0,
-    }, undefined, new AbortController().signal)
+    }, undefined, new AbortController().signal, 4)
     assert.equal(outcome.status, 'imported')
     assert.equal(targetMock.records.get('session-a').events.length, 3)
     assert.deepEqual(targetMock.workspace.sessionIds, ['session-a'])
@@ -181,4 +183,69 @@ test('import reports a conflicting prefix instead of overwriting it', async () =
   }, undefined, new AbortController().signal)
   assert.equal(outcome.status, 'conflict')
   assert.equal(mock.records.get('session-c').events[1].time, local.events[1].time)
+})
+
+test('import refuses a Session written by another Session format version', async () => {
+  const mock = createMock([])
+  const newer = makeSession('session-newer', 2)
+  newer.header.version = 5
+  await assert.rejects(
+    __testing.importOne(mock.ctx, 'session-newer', {
+      header: newer.header,
+      events: newer.events,
+      inheritedEventCount: 0,
+    }, undefined, new AbortController().signal, 4),
+    (error) => {
+      assert.equal(error.name, 'UserError')
+      assert.equal(error.code, 'format-version-mismatch')
+      assert.equal(error.status, 422)
+      assert.match(error.message, /v5/u)
+      assert.match(error.message, /v4/u)
+      return true
+    },
+  )
+  assert.equal(mock.records.has('session-newer'), false)
+})
+
+test('a persistence refusal names the local version when it could not be probed', async () => {
+  const mock = createMock([])
+  const newer = makeSession('session-mystery', 1)
+  newer.header.version = 7
+  await assert.rejects(
+    __testing.importOne(mock.ctx, 'session-mystery', {
+      header: newer.header,
+      events: newer.events,
+      inheritedEventCount: 0,
+    }, undefined, new AbortController().signal, null),
+    (error) => {
+      assert.equal(error.code, 'format-version-mismatch')
+      assert.match(error.message, /v7/u)
+      assert.match(error.message, /本机写入格式为 v4/u)
+      return true
+    },
+  )
+  assert.equal(mock.records.has('session-mystery'), false)
+})
+
+test('the local format version comes from the runtime probe, storage, or not at all', async () => {
+  const empty = createMock([])
+  assert.equal(await __testing.localSessionFormatVersion(empty.ctx), null)
+
+  const stored = createMock([makeSession('session-stored', 1)])
+  assert.equal(await __testing.localSessionFormatVersion(stored.ctx), 4)
+
+  const probed = createMock([])
+  let probes = 0
+  probed.ctx.sessions.prepare = () => {
+    probes += 1
+    return { header: { version: 6 } }
+  }
+  assert.equal(await __testing.localSessionFormatVersion(probed.ctx), 6)
+  assert.equal(probes, 1)
+
+  const broken = createMock([makeSession('session-broken', 1)])
+  broken.ctx.sessions.prepare = () => {
+    throw new Error('prepare is unavailable in this build')
+  }
+  assert.equal(await __testing.localSessionFormatVersion(broken.ctx), 4)
 })

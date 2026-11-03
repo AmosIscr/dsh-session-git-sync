@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-session-git-sync",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Sync DSH Session history between computers through a Git repository.",
   "type": "module",
@@ -47,7 +47,9 @@
       "immediately": true,
       "inject": [
         "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-ui-settings"
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-sidebar"
       ]
     }
   }
