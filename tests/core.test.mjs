@@ -9,6 +9,7 @@ import {
   assertFormatVersion,
   canonicalJson,
   commitAndPush,
+  commitMessageFor,
   isEventPrefix,
   localVersionFromRefusal,
   mergeManifest,
@@ -100,6 +101,17 @@ test('format version helpers compare headers and read writer refusals', () => {
   assert.equal(localVersionFromRefusal(new Error('encodeCurrent requires Session format v4')), 4)
   assert.equal(localVersionFromRefusal(new Error('stored Session uses newer format v5; this build writes v4')), 4)
   assert.equal(localVersionFromRefusal(new Error('disk on fire')), null)
+})
+
+test('commit messages fall back to the generated summary and stay single-line', () => {
+  const generated = 'Sync 2 DSH Session(s)'
+  assert.equal(commitMessageFor('  Fix   upload\nnotes ', generated), 'Fix upload notes')
+  assert.equal(commitMessageFor('', generated), generated)
+  assert.equal(commitMessageFor('   ', generated), generated)
+  assert.equal(commitMessageFor(undefined, generated), generated)
+  assert.equal(commitMessageFor(42, generated), generated)
+  assert.equal(commitMessageFor('a\u0000b', generated), 'a b')
+  assert.equal(commitMessageFor('x'.repeat(300), generated).length, 200)
 })
 
 test('manifest merge keeps unrelated rows and rejects remote-newer overwrite', () => {

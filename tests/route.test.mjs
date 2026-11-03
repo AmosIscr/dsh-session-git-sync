@@ -192,10 +192,14 @@ test('host route pushes from one context and pulls into another', async () => {
     assert.equal(tested.ok, true)
     assert.equal(tested.exists, false)
 
-    const pushed = await json(await source.request('push', { mode: 'sessions', sessionIds: ['session-route'] }))
+    const pushed = await json(await source.request('push', { mode: 'sessions', sessionIds: ['session-route'], message: 'Route test upload' }))
     assert.equal(pushed.ok, true)
     assert.equal(pushed.sessionCount, 1)
+    assert.equal(pushed.message, 'Route test upload')
     assert.match(String(pushed.commit), /^[0-9a-f]{40}$/u)
+    const subject = await runGit(['--git-dir', bare, 'log', '-1', '--format=%s'], { cwd: root })
+    assert.equal(subject.code, 0, subject.stderr)
+    assert.equal(subject.stdout.trim(), 'Route test upload')
 
     const remote = await json(await source.request('remote'))
     assert.equal(remote.ok, true)
@@ -253,6 +257,7 @@ test('pulling a Session written by another format version is refused before it i
     const pushed = await json(await publisher.request('push', { mode: 'sessions', sessionIds: ['session-future'] }))
     assert.equal(pushed.ok, true)
     assert.equal(pushed.sessionCount, 1)
+    assert.equal(pushed.message, 'Sync 1 DSH Session(s)')
 
     // This computer writes v4 and starts from an empty store: a probe answers for it.
     const target = mockContext([], cwd)

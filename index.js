@@ -20,6 +20,7 @@ import {
   assertFormatVersion,
   canonicalJson,
   commitAndPush,
+  commitMessageFor,
   directoryLabel,
   ensureRepo,
   formatMismatchError,
@@ -517,12 +518,9 @@ async function pushSelection(ctx, rootDir, repoDir, body, signal) {
       await resetEmptyRepository(repoDir, config, signal)
     }
     const written = await writeExport(repoDir, data)
-    const delivery = await commitAndPush(
-      repoDir,
-      config,
-      `Sync ${written.written.length} DSH Session(s)${written.skipped.length > 0 ? ` (${written.skipped.length} remote-newer skipped)` : ''}`,
-      signal,
-    )
+    const summary = `Sync ${written.written.length} DSH Session(s)${written.skipped.length > 0 ? ` (${written.skipped.length} remote-newer skipped)` : ''}`
+    const message = commitMessageFor(body.message, summary)
+    const delivery = await commitAndPush(repoDir, config, message, signal)
     if (delivery.ok) {
       await writeConfig(rootDir, { lastPushAt: new Date().toISOString() }).catch(() => undefined)
       return {
@@ -531,6 +529,7 @@ async function pushSelection(ctx, rootDir, repoDir, body, signal) {
         remote: config.remote,
         commit: delivery.commit,
         changed: delivery.changed,
+        message,
         sessionCount: written.written.length,
         skipped: written.skipped,
         workspaces: data.workspaces,

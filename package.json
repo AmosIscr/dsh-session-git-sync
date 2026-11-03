@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-session-git-sync",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "Sync DSH Session history between computers through a Git repository.",
   "type": "module",

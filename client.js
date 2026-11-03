@@ -49,6 +49,10 @@ window.__ModuleLoader__.load({
       'upload.selectedSessions': '{count} Session(s) selected',
       'upload.selectedWorkspaces': '{count} workspace(s) selected',
       'upload.button': 'Upload to Git',
+      'upload.commitLabel': 'Commit message',
+      'upload.commitPlaceholder': 'Leave empty to use the generated message',
+      'upload.commitHint': 'Used as the Git commit subject for this upload.',
+      'upload.confirm': 'Commit and upload',
       'upload.uploading': 'Uploading…',
       'upload.emptySessions': 'No local Sessions match this filter.',
       'upload.emptyWorkspaces': 'No workspaces match this filter.',
@@ -76,6 +80,7 @@ window.__ModuleLoader__.load({
       'result.title': 'Last operation',
       'result.close': 'Dismiss',
       'result.commit': 'Commit',
+      'result.message': 'Message',
       'result.branch': 'Branch',
       'result.imported': 'Imported',
       'result.updated': 'Updated',
@@ -97,6 +102,7 @@ window.__ModuleLoader__.load({
       'status.loadFailed': 'Could not read local state.',
       'error.generic': 'The operation failed.',
       'common.retry': 'Retry',
+      'common.cancel': 'Cancel',
       'common.none': 'None',
     }
 
@@ -142,6 +148,10 @@ window.__ModuleLoader__.load({
       'upload.selectedSessions': '已选择 {count} 个会话',
       'upload.selectedWorkspaces': '已选择 {count} 个工作区',
       'upload.button': '上传到 Git',
+      'upload.commitLabel': '提交信息',
+      'upload.commitPlaceholder': '留空则使用自动生成的信息',
+      'upload.commitHint': '将作为本次上传的 Git 提交标题。',
+      'upload.confirm': '提交并上传',
       'upload.uploading': '上传中…',
       'upload.emptySessions': '没有符合筛选条件的本地会话。',
       'upload.emptyWorkspaces': '没有符合筛选条件的工作区。',
@@ -169,6 +179,7 @@ window.__ModuleLoader__.load({
       'result.title': '最近一次操作',
       'result.close': '关闭',
       'result.commit': '提交',
+      'result.message': '提交信息',
       'result.branch': '分支',
       'result.imported': '新导入',
       'result.updated': '已追加',
@@ -190,6 +201,7 @@ window.__ModuleLoader__.load({
       'status.loadFailed': '读取本地状态失败。',
       'error.generic': '操作失败。',
       'common.retry': '重试',
+      'common.cancel': '取消',
       'common.none': '无',
     }
 
@@ -415,6 +427,16 @@ window.__ModuleLoader__.load({
       .dsh-sgs-empty { padding: 22px 10px; text-align: center; color: var(--dsw-alias-label-secondary); font-size: 12px; }
       .dsh-sgs-emptyBox { border: 1px dashed var(--dsw-alias-border-l2); border-radius: 10px; padding: 24px 16px; text-align: center; color: var(--dsw-alias-label-secondary); font-size: 13px; }
       .dsh-sgs-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+      .dsh-sgs-commit {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        border: 1px solid var(--dsw-alias-border-l1);
+        border-radius: 10px;
+        background: var(--dsw-alias-bg-layer-1);
+        padding: 12px;
+      }
+      .dsh-sgs-commit > label { color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; }
       .dsh-sgs-count { color: var(--dsw-alias-label-secondary); font-size: 12px; }
       .dsh-sgs-result { border-left: 3px solid var(--dsw-alias-state-success-primary); }
       .dsh-sgs-result[data-tone="error"] { border-left-color: var(--dsw-alias-state-error-primary); }
@@ -561,6 +583,7 @@ window.__ModuleLoader__.load({
         rows.push(h('span', { key: 'count' }, [t('result.imported'), ' ', h('b', null, String(data.sessionCount ?? 0))]))
         rows.push(h('span', { key: 'branch' }, [t('result.branch'), ' ', h('b', null, String(data.branch || ''))]))
         if (data.commit) rows.push(h('span', { key: 'commit' }, [t('result.commit'), ' ', h('b', null, String(data.commit).slice(0, 8))]))
+        if (typeof data.message === 'string' && data.message !== '') rows.push(h('span', { key: 'message' }, [t('result.message'), ' ', h('b', null, data.message)]))
       } else {
         for (const key of ['imported', 'updated', 'upToDate', 'localAhead', 'skipped', 'conflicts', 'errors']) {
           const label = t(`result.${key}`)
@@ -654,6 +677,7 @@ window.__ModuleLoader__.load({
       const [notice, setNotice] = React.useState(null)
       const [error, setError] = React.useState(null)
       const [result, setResult] = React.useState(null)
+      const [commitStep, setCommitStep] = React.useState(null)
       const [uploadMode, setUploadMode] = React.useState('sessions')
       const [uploadSearch, setUploadSearch] = React.useState('')
       const [selectedSessions, setSelectedSessions] = React.useState(() => new Set())
@@ -757,7 +781,9 @@ window.__ModuleLoader__.load({
         return remoteWorkspaceRows.filter((workspace) => `${workspace.title || ''} ${workspace.path || ''}`.toLowerCase().includes(needle))
       }, [remoteWorkspaceRows, downloadSearch])
 
-      const upload = async () => {
+      const closeCommitStep = () => setCommitStep(null)
+
+      const upload = () => {
         setError(null)
         setNotice(null)
         const payload = uploadMode === 'workspaces'
@@ -767,10 +793,18 @@ window.__ModuleLoader__.load({
           setError(t('upload.noSelection'))
           return
         }
+        setCommitStep({ payload, message: '' })
+      }
+
+      const confirmUpload = async () => {
+        if (commitStep === null) return
+        setError(null)
+        setNotice(null)
         setBusy('push')
         try {
-          const data = await call('push', payload)
+          const data = await call('push', { ...commitStep.payload, message: commitStep.message })
           setResult({ kind: 'push', data })
+          setCommitStep(null)
           setRemote(null)
           remoteAttempted.current = false
           await loadStatus()
@@ -827,8 +861,8 @@ window.__ModuleLoader__.load({
         ]),
         h('div', { key: 'toolbar', className: 'dsh-sgs-toolbar' }, [
           h('div', { key: 'mode', className: 'dsh-sgs-segment', role: 'group' }, [
-            h('button', { key: 'sessions', type: 'button', 'data-active': String(uploadMode === 'sessions'), onClick: () => setUploadMode('sessions') }, t('mode.sessions')),
-            h('button', { key: 'workspaces', type: 'button', 'data-active': String(uploadMode === 'workspaces'), onClick: () => setUploadMode('workspaces') }, t('mode.workspaces')),
+            h('button', { key: 'sessions', type: 'button', 'data-active': String(uploadMode === 'sessions'), onClick: () => { closeCommitStep(); setUploadMode('sessions') } }, t('mode.sessions')),
+            h('button', { key: 'workspaces', type: 'button', 'data-active': String(uploadMode === 'workspaces'), onClick: () => { closeCommitStep(); setUploadMode('workspaces') } }, t('mode.workspaces')),
           ]),
           h('input', {
             key: 'search',
@@ -838,12 +872,13 @@ window.__ModuleLoader__.load({
             onChange: (event) => setUploadSearch(event.target.value),
           }),
           uploadMode === 'sessions'
-            ? h(Button, { key: 'all', variant: 'ghost', onClick: selectAllSessions }, t('select.all'))
-            : h(Button, { key: 'all', variant: 'ghost', onClick: selectAllWorkspaces }, t('select.all')),
+            ? h(Button, { key: 'all', variant: 'ghost', onClick: () => { closeCommitStep(); selectAllSessions() } }, t('select.all'))
+            : h(Button, { key: 'all', variant: 'ghost', onClick: () => { closeCommitStep(); selectAllWorkspaces() } }, t('select.all')),
           h(Button, {
             key: 'clear',
             variant: 'ghost',
             onClick: () => {
+              closeCommitStep()
               if (uploadMode === 'sessions') setSelectedSessions(new Set())
               else setSelectedWorkspaces(new Set())
             },
@@ -856,7 +891,7 @@ window.__ModuleLoader__.load({
               key: session.id,
               session,
               checked: selectedSessions.has(session.id),
-              onToggle: (id) => toggle(setSelectedSessions, id),
+              onToggle: (id) => { closeCommitStep(); toggle(setSelectedSessions, id) },
               t,
             })))
           : h('div', { key: 'list', className: 'dsh-sgs-list' }, filteredWorkspaces.length === 0
@@ -865,9 +900,33 @@ window.__ModuleLoader__.load({
               key: workspace.id,
               workspace,
               checked: selectedWorkspaces.has(workspace.id),
-              onToggle: (id) => toggle(setSelectedWorkspaces, id),
+              onToggle: (id) => { closeCommitStep(); toggle(setSelectedWorkspaces, id) },
               t,
             }))),
+        commitStep === null ? null : h('div', { key: 'commit', className: 'dsh-sgs-commit' }, [
+          h('label', { key: 'label', htmlFor: 'dsh-sgs-commit-message' }, t('upload.commitLabel')),
+          h('input', {
+            key: 'input',
+            id: 'dsh-sgs-commit-message',
+            className: 'dsh-sgs-input',
+            value: commitStep.message,
+            placeholder: t('upload.commitPlaceholder'),
+            maxLength: 200,
+            autoFocus: true,
+            onChange: (event) => setCommitStep((previous) => previous === null ? previous : { ...previous, message: event.target.value }),
+            onKeyDown: (event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                confirmUpload()
+              }
+            },
+          }),
+          h('div', { key: 'actions', className: 'dsh-sgs-actions' }, [
+            h(Button, { key: 'confirm', variant: 'primary', busy: busy === 'push', onClick: confirmUpload }, busy === 'push' ? t('upload.uploading') : t('upload.confirm')),
+            h(Button, { key: 'cancel', variant: 'ghost', disabled: busy === 'push', onClick: closeCommitStep }, t('common.cancel')),
+          ]),
+          h('p', { key: 'hint', className: 'dsh-sgs-hint' }, t('upload.commitHint')),
+        ]),
         h('div', { key: 'footer', className: 'dsh-sgs-footer' }, [
           h('span', { key: 'count', className: 'dsh-sgs-count' }, uploadMode === 'sessions'
             ? t('upload.selectedSessions', { count: selectedSessions.size })
@@ -876,7 +935,7 @@ window.__ModuleLoader__.load({
             key: 'upload',
             variant: 'primary',
             busy: busy === 'push',
-            disabled: !configured || !gitAvailable,
+            disabled: !configured || !gitAvailable || commitStep !== null,
             onClick: upload,
           }, busy === 'push' ? t('upload.uploading') : t('upload.button')),
         ]),
