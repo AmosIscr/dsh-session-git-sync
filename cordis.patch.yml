@@ -1,0 +1,3 @@
+- insert:
+    - id: session-git-sync
+      name: '@local/dsh-session-git-sync'

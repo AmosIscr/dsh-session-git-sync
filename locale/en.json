@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Session Git Sync",
+    "description": "Upload selected DSH Sessions or workspaces to a Git repository and import them on another computer."
+  }
+}
