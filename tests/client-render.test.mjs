@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-test('client section renders its empty state without a runtime', async () => {
+test('client registers a sidebar entry with a panel page and a settings section', async () => {
   let factory
   globalThis.window = {
     __ModuleLoader__: {
@@ -54,9 +54,10 @@ test('client section renders its empty state without a runtime', async () => {
     return React
   })
 
-  let registered
+  const registrations = []
   const t = (key) => key
   const ctx = {
+    get: () => undefined,
     locale: {
       bind: () => t,
       register: () => () => undefined,
@@ -71,16 +72,27 @@ test('client section renders its empty state without a runtime', async () => {
         callback()
       },
       register(options, component) {
-        registered = { options, component }
+        registrations.push({ options, component })
         return () => undefined
       },
     },
   }
   module.apply(ctx)
-  assert.equal(registered.options.name, 'settings.section')
-  assert.equal(registered.options.id, 'session-git-sync')
+  const section = registrations.find((entry) => entry.options.name === 'settings.section')
+  const main = registrations.find((entry) => entry.options.name === 'main')
+  const entry = registrations.find((entry) => entry.options.name === 'sidebar.panellist')
+  assert.equal(section.options.id, 'session-git-sync')
+  assert.equal(main.options.key, 'session-git-sync')
+  assert.equal(entry.options.id, 'session-git-sync')
+
   hookIndex = 0
-  const tree = registered.component({ t })
+  const tree = section.component({ t })
   assert.equal(tree.type, 'section')
   assert.equal(tree.props.className, 'dsh-sgs-root')
+
+  hookIndex = 0
+  const panel = main.component({ t })
+  assert.equal(panel.type, 'div')
+  assert.equal(panel.props.className, 'dsh-sgs-page')
+  assert.equal(entry.component({ size: 16 }).type, 'svg')
 })

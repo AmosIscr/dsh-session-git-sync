@@ -6,9 +6,12 @@ import test from 'node:test'
 import {
   SCHEMA,
   VERSION,
+  assertFormatVersion,
   canonicalJson,
   commitAndPush,
+  commitMessageFor,
   isEventPrefix,
+  localVersionFromRefusal,
   mergeManifest,
   normalizeBranch,
   normalizeConfig,
@@ -18,6 +21,7 @@ import {
   runGit,
   safeSessionIdSegment,
   sessionFileAbsolute,
+  sessionFormatVersionOf,
   syncWorktree,
   validateSessionPayload,
   writeManifest,
@@ -73,6 +77,41 @@ test('session payload validation and prefix comparison', () => {
   assert.equal(canonicalJson({ b: 1, a: 2 }), canonicalJson({ a: 2, b: 1 }))
   assert.throws(() => validateSessionPayload(payloadOf({ ...session, events: [{ ...session.events[0], seq: 2 }] }), 'session-test'))
   assert.throws(() => validateSessionPayload(payloadOf(session), 'session-other'))
+})
+
+test('format version helpers compare headers and read writer refusals', () => {
+  assert.equal(sessionFormatVersionOf({ version: 4 }), 4)
+  assert.equal(sessionFormatVersionOf({ version: 0 }), null)
+  assert.equal(sessionFormatVersionOf({ version: '4' }), null)
+  assert.equal(sessionFormatVersionOf(undefined), null)
+
+  assert.doesNotThrow(() => assertFormatVersion('session-a', 4, 4))
+  // An unknown side imposes no constraint: the persistence writer stays the judge.
+  assert.doesNotThrow(() => assertFormatVersion('session-a', 5, null))
+  assert.doesNotThrow(() => assertFormatVersion('session-a', null, 4))
+  assert.throws(
+    () => assertFormatVersion('session-a', 5, 4),
+    (error) => error.code === 'format-version-mismatch'
+      && error.status === 422
+      && /v5/u.test(error.message)
+      && /v4/u.test(error.message),
+  )
+
+  // Both shapes the JSONL backend can produce for a version refusal.
+  assert.equal(localVersionFromRefusal(new Error('encodeCurrent requires Session format v4')), 4)
+  assert.equal(localVersionFromRefusal(new Error('stored Session uses newer format v5; this build writes v4')), 4)
+  assert.equal(localVersionFromRefusal(new Error('disk on fire')), null)
+})
+
+test('commit messages fall back to the generated summary and stay single-line', () => {
+  const generated = 'Sync 2 DSH Session(s)'
+  assert.equal(commitMessageFor('  Fix   upload\nnotes ', generated), 'Fix upload notes')
+  assert.equal(commitMessageFor('', generated), generated)
+  assert.equal(commitMessageFor('   ', generated), generated)
+  assert.equal(commitMessageFor(undefined, generated), generated)
+  assert.equal(commitMessageFor(42, generated), generated)
+  assert.equal(commitMessageFor('a\u0000b', generated), 'a b')
+  assert.equal(commitMessageFor('x'.repeat(300), generated).length, 200)
 })
 
 test('manifest merge keeps unrelated rows and rejects remote-newer overwrite', () => {

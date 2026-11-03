@@ -12,18 +12,23 @@ import { basename, join } from 'node:path'
 import {
   DEFAULT_AUTHOR_EMAIL,
   DEFAULT_AUTHOR_NAME,
+  FORMAT_MISMATCH_CODE,
   SCHEMA,
   SESSION_DIR,
   VERSION,
   UserError,
+  assertFormatVersion,
   canonicalJson,
   commitAndPush,
+  commitMessageFor,
   directoryLabel,
   ensureRepo,
+  formatMismatchError,
   gitError,
   gitVersion,
   isEventPrefix,
   isNonFastForward,
+  localVersionFromRefusal,
   mergeManifest,
   messageOf,
   normalizeAuthor,
@@ -39,6 +44,7 @@ import {
   runGit,
   sessionFileAbsolute,
   sessionFileRelative,
+  sessionFormatVersionOf,
   syncWorktree,
   validateSessionPayload,
   writeConfig,
@@ -118,10 +124,11 @@ export function apply(ctx) {
  */
 async function statusData(ctx, rootDir, repoDir) {
   const { config, configError } = await readConfig(rootDir)
-  const [sessions, workspaces, version] = await Promise.all([
+  const [sessions, workspaces, version, localFormatVersion] = await Promise.all([
     localSessions(ctx),
     Promise.resolve(localWorkspaces(ctx)),
     gitVersion(),
+    localSessionFormatVersion(ctx),
   ])
   return {
     ok: true,
@@ -131,6 +138,7 @@ async function statusData(ctx, rootDir, repoDir) {
     repoDir,
     repoInitialized: existsSync(join(repoDir, '.git')),
     git: { available: version !== null, version },
+    localFormatVersion,
     sessions,
     workspaces,
   }
@@ -197,6 +205,53 @@ function workspaceView(workspace) {
     createdAt: workspace.createdAt,
     updatedAt: workspace.updatedAt,
   }
+}
+
+/**
+ * Resolve the DSH Session format version this machine writes.
+ *
+ * A DSH build writes exactly one Session format version and refuses the
+ * others, so an import can only succeed when both machines agree. The gate
+ * needs that number before it writes anything, and three sources can supply it:
+ *
+ * 1. `sessions.prepare()` builds a header with the installed version without
+ *    entering the store, so it answers even before this machine has ever
+ *    stored a Session (the first-import case).
+ * 2. Any stored or live Session header — persistence and query hand out
+ *    current-format logical headers, migrating historical logs on the way out.
+ * 3. Neither answers: return null and let the persistence writer judge, whose
+ *    refusal `localVersionFromRefusal` turns into the same actionable error.
+ * @param {import('@deepseek-ai/cordis').Context} ctx - Host context.
+ * @returns the local format version, or null when this build cannot report one.
+ */
+async function localSessionFormatVersion(ctx) {
+  if (typeof ctx.sessions?.prepare === 'function') {
+    try {
+      const probeId = `session-format-probe-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+      const prepared = ctx.sessions.prepare(probeId, { meta: { createdAt: Date.now() } })
+      const version = sessionFormatVersionOf(prepared?.header)
+      if (version !== null) return version
+    } catch {
+      // A build that refuses this probe still answers through stored headers.
+    }
+  }
+  try {
+    for (const snapshot of await ctx.sessionPersistence.list()) {
+      const version = sessionFormatVersionOf(snapshot?.header)
+      if (version !== null) return version
+    }
+  } catch {
+    // An unreadable backend leaves the writer as the judge.
+  }
+  try {
+    for (const record of await ctx.sessionQuery.listSessions()) {
+      const version = sessionFormatVersionOf(record?.header)
+      if (version !== null) return version
+    }
+  } catch {
+    // Same as above: no hint, so the writer decides.
+  }
+  return null
 }
 
 /** Persist the repository address and commit identity. */
@@ -463,12 +518,9 @@ async function pushSelection(ctx, rootDir, repoDir, body, signal) {
       await resetEmptyRepository(repoDir, config, signal)
     }
     const written = await writeExport(repoDir, data)
-    const delivery = await commitAndPush(
-      repoDir,
-      config,
-      `Sync ${written.written.length} DSH Session(s)${written.skipped.length > 0 ? ` (${written.skipped.length} remote-newer skipped)` : ''}`,
-      signal,
-    )
+    const summary = `Sync ${written.written.length} DSH Session(s)${written.skipped.length > 0 ? ` (${written.skipped.length} remote-newer skipped)` : ''}`
+    const message = commitMessageFor(body.message, summary)
+    const delivery = await commitAndPush(repoDir, config, message, signal)
     if (delivery.ok) {
       await writeConfig(rootDir, { lastPushAt: new Date().toISOString() }).catch(() => undefined)
       return {
@@ -477,6 +529,7 @@ async function pushSelection(ctx, rootDir, repoDir, body, signal) {
         remote: config.remote,
         commit: delivery.commit,
         changed: delivery.changed,
+        message,
         sessionCount: written.written.length,
         skipped: written.skipped,
         workspaces: data.workspaces,
@@ -523,16 +576,25 @@ async function pullSelection(ctx, rootDir, repoDir, body, signal) {
     throw new UserError('所选范围内没有远端会话。', 404, 'remote-selection-empty')
   }
   const targetWorkspace = resolveTargetWorkspace(ctx, body.targetWorkspaceId)
+  const localFormatVersion = await localSessionFormatVersion(ctx)
   const results = []
   for (const entry of selected.entries) {
     signal?.throwIfAborted()
     try {
+      // Fast refusal from the manifest row, before reading a body the writer would reject.
+      assertFormatVersion(entry.id, entry.formatVersion, localFormatVersion)
       const payload = await readSessionPayload(repoDir, entry.id)
-      const outcome = await importOne(ctx, entry.id, payload, targetWorkspace, signal)
+      const outcome = await importOne(ctx, entry.id, payload, targetWorkspace, signal, localFormatVersion)
       results.push({ ...outcome, id: entry.id, title: entry.title ?? outcome.title ?? null })
     } catch (error) {
       if (error && error.name === 'AbortError') throw error
-      results.push({ id: entry.id, title: entry.title ?? null, status: 'error', error: redactSecrets(messageOf(error)) })
+      results.push({
+        id: entry.id,
+        title: entry.title ?? null,
+        status: 'error',
+        code: error instanceof UserError ? error.code : 'internal',
+        error: redactSecrets(messageOf(error)),
+      })
     }
   }
   const counts = countStatuses(results)
@@ -545,6 +607,8 @@ async function pullSelection(ctx, rootDir, repoDir, body, signal) {
     branch: config.branch,
     remote: config.remote,
     targetWorkspace: targetWorkspace === undefined ? null : workspaceView(targetWorkspace),
+    localFormatVersion,
+    formatMismatches: results.filter((row) => row.code === FORMAT_MISMATCH_CODE).length,
     ...counts,
     missing: selected.missing,
     sessions: results,
@@ -567,8 +631,11 @@ function resolveTargetWorkspace(ctx, value) {
  * @param {{ header: Record<string, unknown>, events: Array<Record<string, unknown>>, inheritedEventCount: number }} payload - validated remote payload.
  * @param {object | undefined} targetWorkspace - optional destination workspace.
  * @param {AbortSignal} signal - request lifetime.
+ * @param {number | null | undefined} localFormatVersion - Session format version this machine writes, when known.
  */
-async function importOne(ctx, id, payload, targetWorkspace, signal) {
+async function importOne(ctx, id, payload, targetWorkspace, signal, localFormatVersion) {
+  // Authoritative gate: the payload header is what the writer would store.
+  assertFormatVersion(id, sessionFormatVersionOf(payload.header), localFormatVersion)
   if (ctx.sessions.get(id) !== undefined) {
     return { status: 'skipped', reason: 'live', title: titleOf(payload.header) }
   }
@@ -633,10 +700,7 @@ async function importOne(ctx, id, payload, targetWorkspace, signal) {
   const header = targetWorkspace === undefined || remoteHeader.cwd === targetWorkspace.path
     ? remoteHeader
     : { ...remoteHeader, cwd: targetWorkspace.path }
-  const writer = await ctx.sessionPersistence.create(header, {
-    signal,
-    inheritedEventCount: payload.inheritedEventCount,
-  })
+  const writer = await createImportedSession(ctx, id, header, payload, signal)
   try {
     if (remoteEvents.length > 0) await writer.append(remoteEvents, { signal })
     await writer.flush({ signal })
@@ -650,6 +714,36 @@ async function importOne(ctx, id, payload, targetWorkspace, signal) {
     cwd: header.cwd ?? null,
     mapped: targetWorkspace !== undefined && remoteHeader.cwd !== targetWorkspace.path,
     warning: attachWarning,
+  }
+}
+
+/**
+ * Take write ownership of the imported Session identity.
+ *
+ * The persistence writer is the authority on which Session format this build
+ * can store. When the runtime could not report its version beforehand (matrix
+ * case: an empty store on a build that refuses the probe) its refusal is
+ * translated into the same actionable error instead of an opaque codec
+ * message. Nothing is stored on this path: the refusal precedes registration.
+ * @param {import('@deepseek-ai/cordis').Context} ctx - Host context.
+ * @param {string} id - Session identity.
+ * @param {Record<string, unknown>} header - header to store.
+ * @param {{ inheritedEventCount: number }} payload - validated remote payload.
+ * @param {AbortSignal} signal - request lifetime.
+ */
+async function createImportedSession(ctx, id, header, payload, signal) {
+  try {
+    return await ctx.sessionPersistence.create(header, {
+      signal,
+      inheritedEventCount: payload.inheritedEventCount,
+    })
+  } catch (error) {
+    const detected = localVersionFromRefusal(error)
+    const remoteVersion = sessionFormatVersionOf(header)
+    if (detected !== null && remoteVersion !== null && detected !== remoteVersion) {
+      throw formatMismatchError(id, remoteVersion, detected)
+    }
+    throw error
   }
 }
 
@@ -763,10 +857,12 @@ function jsonResponse(value, status = 200) {
 // Exports for development checks; the Loader ignores named exports beyond apply/inject.
 export const __testing = {
   localSessions,
+  localSessionFormatVersion,
   collectSelection,
   exportSessions,
   writeExport,
   importOne,
+  createImportedSession,
   selectRemoteSessions,
   countStatuses,
   sessionFileRelative,

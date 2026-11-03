@@ -5,9 +5,10 @@ window.__ModuleLoader__.load({
     const h = React.createElement
 
     const NS = 'session-git-sync'
+    const PANEL_ID = 'session-git-sync'
 
     const en = {
-      'nav.title': 'Session Git Sync',
+      'nav.title': 'Session Sync',
       'page.title': 'Session Git Sync',
       'page.intro': 'Move Session history between computers through a Git repository. Select individual Sessions or every Session in a workspace.',
       'page.safety': 'Session transcripts are written to the repository as readable JSON. Use a private repository; attachments and workspace source files are not included.',
@@ -28,9 +29,13 @@ window.__ModuleLoader__.load({
       'config.repo': 'Local clone',
       'config.gitReady': 'Git available',
       'config.gitMissing': 'Git not found in PATH',
+      'config.formatVersion': 'Local Session format',
       'config.notConfigured': 'Add a repository address to enable upload and download.',
       'config.configError': 'The saved config could not be read; defaults are shown.',
       'config.privateHint': 'Use a private repository. Do not commit credentials into the URL.',
+      'config.panelHint': 'Upload and download live in the Session Sync entry in the left sidebar.',
+      'config.openPanel': 'Open sync panel',
+      'panel.configMissing': 'No repository is configured yet. Set the repository address and branch in Settings → Session Sync.',
       'tabs.upload': 'Upload',
       'tabs.download': 'Download',
       'mode.sessions': 'Sessions',
@@ -44,6 +49,10 @@ window.__ModuleLoader__.load({
       'upload.selectedSessions': '{count} Session(s) selected',
       'upload.selectedWorkspaces': '{count} workspace(s) selected',
       'upload.button': 'Upload to Git',
+      'upload.commitLabel': 'Commit message',
+      'upload.commitPlaceholder': 'Leave empty to use the generated message',
+      'upload.commitHint': 'Used as the Git commit subject for this upload.',
+      'upload.confirm': 'Commit and upload',
       'upload.uploading': 'Uploading…',
       'upload.emptySessions': 'No local Sessions match this filter.',
       'upload.emptyWorkspaces': 'No workspaces match this filter.',
@@ -71,6 +80,7 @@ window.__ModuleLoader__.load({
       'result.title': 'Last operation',
       'result.close': 'Dismiss',
       'result.commit': 'Commit',
+      'result.message': 'Message',
       'result.branch': 'Branch',
       'result.imported': 'Imported',
       'result.updated': 'Updated',
@@ -82,6 +92,7 @@ window.__ModuleLoader__.load({
       'result.mapped': 'Mapped into',
       'result.warning': 'Warning',
       'result.noRemote': 'Remote branch not found.',
+      'result.formatMismatch': '{count} Session(s) use another DSH Session format and were skipped; see each row for the versions.',
       'session.untitled': 'Untitled Session',
       'session.events': '{count} events',
       'session.live': 'Open',
@@ -91,11 +102,12 @@ window.__ModuleLoader__.load({
       'status.loadFailed': 'Could not read local state.',
       'error.generic': 'The operation failed.',
       'common.retry': 'Retry',
+      'common.cancel': 'Cancel',
       'common.none': 'None',
     }
 
     const zh = {
-      'nav.title': '会话 Git 同步',
+      'nav.title': '会话同步',
       'page.title': '会话 Git 同步',
       'page.intro': '通过 Git 仓库在不同电脑之间迁移会话历史。可以按单个会话选择，也可以一次选择整个工作区。',
       'page.safety': '会话记录会以可读 JSON 写入仓库。请使用私有仓库；附件与工作区源码不会上传。',
@@ -116,9 +128,13 @@ window.__ModuleLoader__.load({
       'config.repo': '本地克隆',
       'config.gitReady': 'Git 可用',
       'config.gitMissing': 'PATH 中找不到 Git',
+      'config.formatVersion': '本机会话格式',
       'config.notConfigured': '填写仓库地址后即可上传和下载。',
       'config.configError': '读取已保存的配置失败，当前显示默认值。',
       'config.privateHint': '请使用私有仓库，不要把访问令牌直接写进仓库地址。',
+      'config.panelHint': '上传与下载在左侧栏的「会话同步」入口中。',
+      'config.openPanel': '打开同步面板',
+      'panel.configMissing': '还没有配置仓库。请先在 设置 → 会话同步 中填写仓库地址与分支。',
       'tabs.upload': '上传',
       'tabs.download': '下载',
       'mode.sessions': '按会话',
@@ -132,6 +148,10 @@ window.__ModuleLoader__.load({
       'upload.selectedSessions': '已选择 {count} 个会话',
       'upload.selectedWorkspaces': '已选择 {count} 个工作区',
       'upload.button': '上传到 Git',
+      'upload.commitLabel': '提交信息',
+      'upload.commitPlaceholder': '留空则使用自动生成的信息',
+      'upload.commitHint': '将作为本次上传的 Git 提交标题。',
+      'upload.confirm': '提交并上传',
       'upload.uploading': '上传中…',
       'upload.emptySessions': '没有符合筛选条件的本地会话。',
       'upload.emptyWorkspaces': '没有符合筛选条件的工作区。',
@@ -159,6 +179,7 @@ window.__ModuleLoader__.load({
       'result.title': '最近一次操作',
       'result.close': '关闭',
       'result.commit': '提交',
+      'result.message': '提交信息',
       'result.branch': '分支',
       'result.imported': '新导入',
       'result.updated': '已追加',
@@ -170,6 +191,7 @@ window.__ModuleLoader__.load({
       'result.mapped': '映射到',
       'result.warning': '警告',
       'result.noRemote': '未找到远端分支。',
+      'result.formatMismatch': '{count} 个会话使用了其他 DSH 版本的会话格式，已跳过；具体版本见下方逐条结果。',
       'session.untitled': '未命名会话',
       'session.events': '{count} 个事件',
       'session.live': '打开中',
@@ -179,6 +201,7 @@ window.__ModuleLoader__.load({
       'status.loadFailed': '读取本地状态失败。',
       'error.generic': '操作失败。',
       'common.retry': '重试',
+      'common.cancel': '取消',
       'common.none': '无',
     }
 
@@ -197,6 +220,50 @@ window.__ModuleLoader__.load({
       }
       .dsh-sgs-hero h2 { margin: 0 0 4px; font-size: 18px; line-height: 26px; font-weight: 600; }
       .dsh-sgs-hero p { margin: 0; color: var(--dsw-alias-label-secondary); font-size: 13px; line-height: 20px; }
+      .dsh-sgs-hero p + p { margin-top: 4px; }
+      .dsh-sgs-page {
+        box-sizing: border-box;
+        height: 100%;
+        color: var(--dsw-alias-label-primary);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        padding: 0 clamp(24px, 4vw, 48px) 48px;
+        overflow: auto;
+        font-size: 14px;
+        line-height: 22px;
+      }
+      .dsh-sgs-page > * { box-sizing: border-box; width: 100%; max-width: 820px; }
+      .dsh-sgs-pageHead {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding-top: 28px;
+      }
+      [data-platform="darwin"] .dsh-sgs-pageHead { padding-top: calc(28px + var(--dsh-frame-top-clearance, 0px)); }
+      .dsh-sgs-pageHeading { min-width: 0; }
+      .dsh-sgs-pageTitle { margin: 0; font-size: 20px; font-weight: 500; line-height: 28px; }
+      .dsh-sgs-pageIntro { margin: 4px 0 0; color: var(--dsw-alias-label-secondary); font-size: 13px; line-height: 20px; }
+      .dsh-sgs-pageMeta { flex: none; display: flex; align-items: center; gap: 8px; }
+      .dsh-sgs-pageRepo {
+        margin: -8px 0 0;
+        color: var(--dsw-alias-label-secondary);
+        font-size: 12px;
+        line-height: 18px;
+        overflow-wrap: anywhere;
+      }
+      .dsh-sgs-notice {
+        border: 1px solid var(--dsw-alias-border-l1);
+        border-radius: 10px;
+        background: var(--dsw-alias-bg-layer-1);
+        color: var(--dsw-alias-label-secondary);
+        margin: 0;
+        padding: 12px 14px;
+        font-size: 13px;
+        line-height: 20px;
+      }
       .dsh-sgs-card {
         box-sizing: border-box;
         border: 1px solid var(--dsw-alias-border-l1);
@@ -360,6 +427,16 @@ window.__ModuleLoader__.load({
       .dsh-sgs-empty { padding: 22px 10px; text-align: center; color: var(--dsw-alias-label-secondary); font-size: 12px; }
       .dsh-sgs-emptyBox { border: 1px dashed var(--dsw-alias-border-l2); border-radius: 10px; padding: 24px 16px; text-align: center; color: var(--dsw-alias-label-secondary); font-size: 13px; }
       .dsh-sgs-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+      .dsh-sgs-commit {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        border: 1px solid var(--dsw-alias-border-l1);
+        border-radius: 10px;
+        background: var(--dsw-alias-bg-layer-1);
+        padding: 12px;
+      }
+      .dsh-sgs-commit > label { color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; }
       .dsh-sgs-count { color: var(--dsw-alias-label-secondary); font-size: 12px; }
       .dsh-sgs-result { border-left: 3px solid var(--dsw-alias-state-success-primary); }
       .dsh-sgs-result[data-tone="error"] { border-left-color: var(--dsw-alias-state-error-primary); }
@@ -506,6 +583,7 @@ window.__ModuleLoader__.load({
         rows.push(h('span', { key: 'count' }, [t('result.imported'), ' ', h('b', null, String(data.sessionCount ?? 0))]))
         rows.push(h('span', { key: 'branch' }, [t('result.branch'), ' ', h('b', null, String(data.branch || ''))]))
         if (data.commit) rows.push(h('span', { key: 'commit' }, [t('result.commit'), ' ', h('b', null, String(data.commit).slice(0, 8))]))
+        if (typeof data.message === 'string' && data.message !== '') rows.push(h('span', { key: 'message' }, [t('result.message'), ' ', h('b', null, data.message)]))
       } else {
         for (const key of ['imported', 'updated', 'upToDate', 'localAhead', 'skipped', 'conflicts', 'errors']) {
           const label = t(`result.${key}`)
@@ -529,6 +607,9 @@ window.__ModuleLoader__.load({
         !isPush && Array.isArray(data.missing) && data.missing.length > 0
           ? h('p', { key: 'missing', className: 'dsh-sgs-warning' }, t('download.missing', { count: data.missing.length }))
           : null,
+        !isPush && data.formatMismatches > 0
+          ? h('p', { key: 'format', className: 'dsh-sgs-warning' }, t('result.formatMismatch', { count: data.formatMismatches }))
+          : null,
         !isPush && Array.isArray(data.sessions)
           ? h('div', { key: 'list', className: 'dsh-sgs-subList' }, data.sessions.map((row) => h('div', { key: row.id, className: 'dsh-sgs-subRow' }, [
             h('span', null, `${row.title || row.id}`),
@@ -544,22 +625,59 @@ window.__ModuleLoader__.load({
       ])
     }
 
-    function SessionGitSyncSection(props) {
+    let syncRevision = 0
+    const syncListeners = new Set()
+
+    /** Tell every mounted sync surface that the repository config changed. */
+    function notifySyncChanged() {
+      syncRevision += 1
+      for (const listener of [...syncListeners]) listener(syncRevision)
+    }
+
+    /** Re-render a sync surface when another surface saved the config. */
+    function useSyncRevision() {
+      const [revision, setRevision] = React.useState(syncRevision)
+      React.useEffect(() => {
+        const listener = (value) => setRevision(value)
+        syncListeners.add(listener)
+        return () => syncListeners.delete(listener)
+      }, [])
+      return revision
+    }
+
+    /** The left-sidebar glyph: history moving up to Git and back down. */
+    function SyncPanelIcon(props) {
+      const size = props.size || 16
+      return h('svg', {
+        width: size,
+        height: size,
+        viewBox: '0 0 16 16',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: props.active === true ? 1.6 : 1.4,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        'aria-hidden': 'true',
+        focusable: 'false',
+      }, [
+        h('path', { key: 'up', d: 'M5 12.5V3.5' }),
+        h('path', { key: 'upHead', d: 'M2.9 5.6 5 3.5l2.1 2.1' }),
+        h('path', { key: 'down', d: 'M11 3.5v9' }),
+        h('path', { key: 'downHead', d: 'M8.9 10.4 11 12.5l2.1-2.1' }),
+      ])
+    }
+
+    function SessionGitSyncPanel(props) {
       const t = props.t
       const [status, setStatus] = React.useState(null)
       const [statusError, setStatusError] = React.useState(null)
       const [loading, setLoading] = React.useState(true)
       const [tab, setTab] = React.useState('upload')
-      const [form, setForm] = React.useState({
-        remote: '',
-        branch: 'main',
-        authorName: '',
-        authorEmail: '',
-      })
       const [busy, setBusy] = React.useState(null)
       const [notice, setNotice] = React.useState(null)
       const [error, setError] = React.useState(null)
       const [result, setResult] = React.useState(null)
+      const [commitStep, setCommitStep] = React.useState(null)
       const [uploadMode, setUploadMode] = React.useState('sessions')
       const [uploadSearch, setUploadSearch] = React.useState('')
       const [selectedSessions, setSelectedSessions] = React.useState(() => new Set())
@@ -572,21 +690,13 @@ window.__ModuleLoader__.load({
       const [remote, setRemote] = React.useState(null)
       const [remoteLoading, setRemoteLoading] = React.useState(false)
       const [remoteError, setRemoteError] = React.useState(null)
-      const formLoaded = React.useRef(false)
       const remoteAttempted = React.useRef(false)
+      const revision = useSyncRevision()
+      const seenRevision = React.useRef(revision)
 
       const applyStatus = React.useCallback((data) => {
         setStatus(data)
         setStatusError(null)
-        if (!formLoaded.current) {
-          formLoaded.current = true
-          setForm({
-            remote: data.config?.remote || '',
-            branch: data.config?.branch || 'main',
-            authorName: data.config?.authorName || '',
-            authorEmail: data.config?.authorEmail || '',
-          })
-        }
         const known = new Set((data.sessions || []).map((session) => session.id))
         setSelectedSessions((previous) => new Set([...previous].filter((id) => known.has(id))))
         const knownWorkspaces = new Set((data.workspaces || []).map((workspace) => workspace.id))
@@ -607,6 +717,14 @@ window.__ModuleLoader__.load({
       React.useEffect(() => {
         loadStatus()
       }, [loadStatus])
+
+      React.useEffect(() => {
+        if (seenRevision.current === revision) return
+        seenRevision.current = revision
+        setRemote(null)
+        remoteAttempted.current = false
+        loadStatus()
+      }, [revision, loadStatus])
 
       const loadRemote = React.useCallback(async () => {
         remoteAttempted.current = true
@@ -663,49 +781,9 @@ window.__ModuleLoader__.load({
         return remoteWorkspaceRows.filter((workspace) => `${workspace.title || ''} ${workspace.path || ''}`.toLowerCase().includes(needle))
       }, [remoteWorkspaceRows, downloadSearch])
 
-      const updateForm = (key) => (event) => {
-        setForm((previous) => ({ ...previous, [key]: event.target.value }))
-      }
+      const closeCommitStep = () => setCommitStep(null)
 
-      const saveConfig = async (event) => {
-        event.preventDefault()
-        setBusy('save')
-        setError(null)
-        setNotice(null)
-        try {
-          const data = await call('saveConfig', form)
-          applyStatus(data.status)
-          setRemote(null)
-          remoteAttempted.current = false
-          setForm({
-            remote: data.config?.remote || '',
-            branch: data.config?.branch || 'main',
-            authorName: data.config?.authorName || '',
-            authorEmail: data.config?.authorEmail || '',
-          })
-          setNotice(t('config.saved'))
-        } catch (failure) {
-          setError(failure instanceof Error ? failure.message : String(failure))
-        } finally {
-          setBusy(null)
-        }
-      }
-
-      const testConnection = async () => {
-        setBusy('test')
-        setError(null)
-        setNotice(null)
-        try {
-          const data = await call('test')
-          setNotice(data.exists ? t('config.testFound') : t('config.testMissing'))
-        } catch (failure) {
-          setError(failure instanceof Error ? failure.message : String(failure))
-        } finally {
-          setBusy(null)
-        }
-      }
-
-      const upload = async () => {
+      const upload = () => {
         setError(null)
         setNotice(null)
         const payload = uploadMode === 'workspaces'
@@ -715,10 +793,18 @@ window.__ModuleLoader__.load({
           setError(t('upload.noSelection'))
           return
         }
+        setCommitStep({ payload, message: '' })
+      }
+
+      const confirmUpload = async () => {
+        if (commitStep === null) return
+        setError(null)
+        setNotice(null)
         setBusy('push')
         try {
-          const data = await call('push', payload)
+          const data = await call('push', { ...commitStep.payload, message: commitStep.message })
           setResult({ kind: 'push', data })
+          setCommitStep(null)
           setRemote(null)
           remoteAttempted.current = false
           await loadStatus()
@@ -766,76 +852,6 @@ window.__ModuleLoader__.load({
         setRemoteWorkspaces(new Set(filteredRemoteWorkspaces.map((workspace) => workspace.id)))
       }
 
-      const renderConfig = () => h('form', { className: 'dsh-sgs-card', onSubmit: saveConfig }, [
-        h('div', { key: 'head', className: 'dsh-sgs-cardHead' }, [
-          h('div', { key: 'copy' }, [
-            h('h3', null, t('config.title')),
-            h('p', null, t('config.intro')),
-          ]),
-          h(Badge, {
-            key: 'git',
-            tone: gitAvailable ? 'ok' : 'error',
-          }, gitAvailable ? t('config.gitReady') : t('config.gitMissing')),
-        ]),
-        h('div', { key: 'remote', className: 'dsh-sgs-field' }, [
-          h('label', { htmlFor: 'dsh-sgs-remote' }, t('config.remote')),
-          h('input', {
-            id: 'dsh-sgs-remote',
-            className: 'dsh-sgs-input',
-            value: form.remote,
-            placeholder: t('config.remotePlaceholder'),
-            spellCheck: false,
-            autoComplete: 'off',
-            onChange: updateForm('remote'),
-          }),
-        ]),
-        h('div', { key: 'grid', className: 'dsh-sgs-grid' }, [
-          h('div', { key: 'branch', className: 'dsh-sgs-field' }, [
-            h('label', { htmlFor: 'dsh-sgs-branch' }, t('config.branch')),
-            h('input', {
-              id: 'dsh-sgs-branch',
-              className: 'dsh-sgs-input',
-              value: form.branch,
-              spellCheck: false,
-              autoComplete: 'off',
-              onChange: updateForm('branch'),
-            }),
-          ]),
-          h('div', { key: 'author', className: 'dsh-sgs-field' }, [
-            h('label', { htmlFor: 'dsh-sgs-author' }, t('config.authorName')),
-            h('input', {
-              id: 'dsh-sgs-author',
-              className: 'dsh-sgs-input',
-              value: form.authorName,
-              spellCheck: false,
-              onChange: updateForm('authorName'),
-            }),
-          ]),
-        ]),
-        h('details', { key: 'advanced', className: 'dsh-sgs-details' }, [
-          h('summary', { key: 'summary' }, t('config.authorEmail')),
-          h('div', { key: 'email', className: 'dsh-sgs-field' }, [
-            h('label', { htmlFor: 'dsh-sgs-email' }, t('config.authorEmail')),
-            h('input', {
-              id: 'dsh-sgs-email',
-              className: 'dsh-sgs-input',
-              value: form.authorEmail,
-              spellCheck: false,
-              onChange: updateForm('authorEmail'),
-            }),
-          ]),
-        ]),
-        h('div', { key: 'actions', className: 'dsh-sgs-actions' }, [
-          h(Button, { key: 'save', type: 'submit', variant: 'primary', busy: busy === 'save' }, busy === 'save' ? t('config.saving') : t('config.save')),
-          h(Button, { key: 'test', busy: busy === 'test', disabled: !configured, onClick: testConnection }, busy === 'test' ? t('config.testing') : t('config.test')),
-        ]),
-        configured
-          ? h('p', { key: 'hint', className: 'dsh-sgs-hint' }, `${t('config.repo')}: ${status?.repoDir || ''}`)
-          : h('p', { key: 'not', className: 'dsh-sgs-hint' }, t('config.notConfigured')),
-        h('p', { key: 'private', className: 'dsh-sgs-warning' }, t('page.safety')),
-        status?.configError ? h('p', { key: 'cfgerr', className: 'dsh-sgs-warning' }, t('config.configError')) : null,
-      ])
-
       const renderUpload = () => h('div', { className: 'dsh-sgs-panel' }, [
         h('div', { key: 'head', className: 'dsh-sgs-cardHead' }, [
           h('div', { key: 'copy' }, [
@@ -845,8 +861,8 @@ window.__ModuleLoader__.load({
         ]),
         h('div', { key: 'toolbar', className: 'dsh-sgs-toolbar' }, [
           h('div', { key: 'mode', className: 'dsh-sgs-segment', role: 'group' }, [
-            h('button', { key: 'sessions', type: 'button', 'data-active': String(uploadMode === 'sessions'), onClick: () => setUploadMode('sessions') }, t('mode.sessions')),
-            h('button', { key: 'workspaces', type: 'button', 'data-active': String(uploadMode === 'workspaces'), onClick: () => setUploadMode('workspaces') }, t('mode.workspaces')),
+            h('button', { key: 'sessions', type: 'button', 'data-active': String(uploadMode === 'sessions'), onClick: () => { closeCommitStep(); setUploadMode('sessions') } }, t('mode.sessions')),
+            h('button', { key: 'workspaces', type: 'button', 'data-active': String(uploadMode === 'workspaces'), onClick: () => { closeCommitStep(); setUploadMode('workspaces') } }, t('mode.workspaces')),
           ]),
           h('input', {
             key: 'search',
@@ -856,12 +872,13 @@ window.__ModuleLoader__.load({
             onChange: (event) => setUploadSearch(event.target.value),
           }),
           uploadMode === 'sessions'
-            ? h(Button, { key: 'all', variant: 'ghost', onClick: selectAllSessions }, t('select.all'))
-            : h(Button, { key: 'all', variant: 'ghost', onClick: selectAllWorkspaces }, t('select.all')),
+            ? h(Button, { key: 'all', variant: 'ghost', onClick: () => { closeCommitStep(); selectAllSessions() } }, t('select.all'))
+            : h(Button, { key: 'all', variant: 'ghost', onClick: () => { closeCommitStep(); selectAllWorkspaces() } }, t('select.all')),
           h(Button, {
             key: 'clear',
             variant: 'ghost',
             onClick: () => {
+              closeCommitStep()
               if (uploadMode === 'sessions') setSelectedSessions(new Set())
               else setSelectedWorkspaces(new Set())
             },
@@ -874,7 +891,7 @@ window.__ModuleLoader__.load({
               key: session.id,
               session,
               checked: selectedSessions.has(session.id),
-              onToggle: (id) => toggle(setSelectedSessions, id),
+              onToggle: (id) => { closeCommitStep(); toggle(setSelectedSessions, id) },
               t,
             })))
           : h('div', { key: 'list', className: 'dsh-sgs-list' }, filteredWorkspaces.length === 0
@@ -883,9 +900,33 @@ window.__ModuleLoader__.load({
               key: workspace.id,
               workspace,
               checked: selectedWorkspaces.has(workspace.id),
-              onToggle: (id) => toggle(setSelectedWorkspaces, id),
+              onToggle: (id) => { closeCommitStep(); toggle(setSelectedWorkspaces, id) },
               t,
             }))),
+        commitStep === null ? null : h('div', { key: 'commit', className: 'dsh-sgs-commit' }, [
+          h('label', { key: 'label', htmlFor: 'dsh-sgs-commit-message' }, t('upload.commitLabel')),
+          h('input', {
+            key: 'input',
+            id: 'dsh-sgs-commit-message',
+            className: 'dsh-sgs-input',
+            value: commitStep.message,
+            placeholder: t('upload.commitPlaceholder'),
+            maxLength: 200,
+            autoFocus: true,
+            onChange: (event) => setCommitStep((previous) => previous === null ? previous : { ...previous, message: event.target.value }),
+            onKeyDown: (event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                confirmUpload()
+              }
+            },
+          }),
+          h('div', { key: 'actions', className: 'dsh-sgs-actions' }, [
+            h(Button, { key: 'confirm', variant: 'primary', busy: busy === 'push', onClick: confirmUpload }, busy === 'push' ? t('upload.uploading') : t('upload.confirm')),
+            h(Button, { key: 'cancel', variant: 'ghost', disabled: busy === 'push', onClick: closeCommitStep }, t('common.cancel')),
+          ]),
+          h('p', { key: 'hint', className: 'dsh-sgs-hint' }, t('upload.commitHint')),
+        ]),
         h('div', { key: 'footer', className: 'dsh-sgs-footer' }, [
           h('span', { key: 'count', className: 'dsh-sgs-count' }, uploadMode === 'sessions'
             ? t('upload.selectedSessions', { count: selectedSessions.size })
@@ -894,7 +935,7 @@ window.__ModuleLoader__.load({
             key: 'upload',
             variant: 'primary',
             busy: busy === 'push',
-            disabled: !configured || !gitAvailable,
+            disabled: !configured || !gitAvailable || commitStep !== null,
             onClick: upload,
           }, busy === 'push' ? t('upload.uploading') : t('upload.button')),
         ]),
@@ -995,23 +1036,35 @@ window.__ModuleLoader__.load({
         ])
       }
 
-      return h('section', { className: 'dsh-sgs-root' }, [
-        h('div', { key: 'hero', className: 'dsh-sgs-hero' }, [
-          h('h2', null, t('page.title')),
-          h('p', null, t('page.intro')),
+      return h('div', { className: 'dsh-sgs-page' }, [
+        h('header', { key: 'head', className: 'dsh-sgs-pageHead' }, [
+          h('div', { key: 'heading', className: 'dsh-sgs-pageHeading' }, [
+            h('h2', { key: 'title', className: 'dsh-sgs-pageTitle' }, t('page.title')),
+            h('p', { key: 'intro', className: 'dsh-sgs-pageIntro' }, t('page.intro')),
+          ]),
+          h('div', { key: 'meta', className: 'dsh-sgs-pageMeta' }, [
+            status === null
+              ? null
+              : h(Badge, { key: 'git', tone: gitAvailable ? 'ok' : 'error' }, gitAvailable ? t('config.gitReady') : t('config.gitMissing')),
+          ]),
         ]),
+        status !== null && !configured
+          ? h('p', { key: 'missing', className: 'dsh-sgs-notice' }, t('panel.configMissing'))
+          : null,
+        configured && status !== null
+          ? h('p', { key: 'repo', className: 'dsh-sgs-pageRepo' }, `${config.remote}${config.branch ? ` · ${config.branch}` : ''}`)
+          : null,
         statusError
           ? h('div', { key: 'statusError', className: 'dsh-sgs-emptyBox' }, [
-            h('p', { className: 'dsh-sgs-error' }, `${t('status.loadFailed')} ${statusError}`),
-            h(Button, { onClick: loadStatus }, t('common.retry')),
+            h('p', { key: 'error', className: 'dsh-sgs-error' }, `${t('status.loadFailed')} ${statusError}`),
+            h(Button, { key: 'retry', onClick: loadStatus }, t('common.retry')),
           ])
           : null,
         loading && status === null ? h('div', { key: 'loading', className: 'dsh-sgs-emptyBox' }, t('status.loading')) : null,
         notice ? h('p', { key: 'notice', className: 'dsh-sgs-success' }, notice) : null,
         error ? h('p', { key: 'error', className: 'dsh-sgs-error' }, error) : null,
-        status === null ? null : renderConfig(),
         result ? h(ResultCard, { key: 'result', result, t, onClose: () => setResult(null) }) : null,
-        h('div', { key: 'tabs', className: 'dsh-sgs-tabs', role: 'tablist' }, [
+        status === null ? null : h('div', { key: 'tabs', className: 'dsh-sgs-tabs', role: 'tablist' }, [
           h('button', {
             key: 'upload',
             type: 'button',
@@ -1031,7 +1084,197 @@ window.__ModuleLoader__.load({
             onClick: () => setTab('download'),
           }, t('tabs.download')),
         ]),
-        tab === 'upload' ? renderUpload() : renderDownload(),
+        status === null ? null : (tab === 'upload' ? renderUpload() : renderDownload()),
+      ])
+    }
+
+    function SessionGitSyncSection(props) {
+      const t = props.t
+      const [status, setStatus] = React.useState(null)
+      const [statusError, setStatusError] = React.useState(null)
+      const [loading, setLoading] = React.useState(true)
+      const [form, setForm] = React.useState({
+        remote: '',
+        branch: 'main',
+        authorName: '',
+        authorEmail: '',
+      })
+      const [busy, setBusy] = React.useState(null)
+      const [notice, setNotice] = React.useState(null)
+      const [error, setError] = React.useState(null)
+      const formLoaded = React.useRef(false)
+
+      const applyStatus = React.useCallback((data) => {
+        setStatus(data)
+        setStatusError(null)
+        if (!formLoaded.current) {
+          formLoaded.current = true
+          setForm({
+            remote: data.config?.remote || '',
+            branch: data.config?.branch || 'main',
+            authorName: data.config?.authorName || '',
+            authorEmail: data.config?.authorEmail || '',
+          })
+        }
+      }, [])
+
+      const loadStatus = React.useCallback(async () => {
+        setLoading(true)
+        try {
+          applyStatus(await call('status'))
+        } catch (failure) {
+          setStatusError(failure instanceof Error ? failure.message : String(failure))
+        } finally {
+          setLoading(false)
+        }
+      }, [applyStatus])
+
+      React.useEffect(() => {
+        loadStatus()
+      }, [loadStatus])
+
+      const config = status?.config || { remote: '', branch: 'main' }
+      const configured = typeof config.remote === 'string' && config.remote.trim() !== ''
+      const gitAvailable = status?.git?.available === true
+
+      const updateForm = (key) => (event) => {
+        setForm((previous) => ({ ...previous, [key]: event.target.value }))
+      }
+
+      const saveConfig = async (event) => {
+        event.preventDefault()
+        setBusy('save')
+        setError(null)
+        setNotice(null)
+        try {
+          const data = await call('saveConfig', form)
+          applyStatus(data.status)
+          setForm({
+            remote: data.config?.remote || '',
+            branch: data.config?.branch || 'main',
+            authorName: data.config?.authorName || '',
+            authorEmail: data.config?.authorEmail || '',
+          })
+          setNotice(t('config.saved'))
+          notifySyncChanged()
+        } catch (failure) {
+          setError(failure instanceof Error ? failure.message : String(failure))
+        } finally {
+          setBusy(null)
+        }
+      }
+
+      const testConnection = async () => {
+        setBusy('test')
+        setError(null)
+        setNotice(null)
+        try {
+          const data = await call('test')
+          setNotice(data.exists ? t('config.testFound') : t('config.testMissing'))
+        } catch (failure) {
+          setError(failure instanceof Error ? failure.message : String(failure))
+        } finally {
+          setBusy(null)
+        }
+      }
+
+      const openPanel = () => {
+        if (typeof props.openPanel === 'function') {
+          props.openPanel()
+          if (typeof props.close === 'function') props.close()
+        }
+      }
+
+      return h('section', { className: 'dsh-sgs-root' }, [
+        h('div', { key: 'hero', className: 'dsh-sgs-hero' }, [
+          h('h2', null, t('page.title')),
+          h('p', null, t('page.intro')),
+          h('p', null, t('config.panelHint')),
+        ]),
+        statusError
+          ? h('div', { key: 'statusError', className: 'dsh-sgs-emptyBox' }, [
+            h('p', { className: 'dsh-sgs-error' }, `${t('status.loadFailed')} ${statusError}`),
+            h(Button, { onClick: loadStatus }, t('common.retry')),
+          ])
+          : null,
+        loading && status === null ? h('div', { key: 'loading', className: 'dsh-sgs-emptyBox' }, t('status.loading')) : null,
+        notice ? h('p', { key: 'notice', className: 'dsh-sgs-success' }, notice) : null,
+        error ? h('p', { key: 'error', className: 'dsh-sgs-error' }, error) : null,
+        status === null ? null : h('form', { key: 'config', className: 'dsh-sgs-card', onSubmit: saveConfig }, [
+          h('div', { key: 'head', className: 'dsh-sgs-cardHead' }, [
+            h('div', { key: 'copy' }, [
+              h('h3', null, t('config.title')),
+              h('p', null, t('config.intro')),
+            ]),
+            h(Badge, {
+              key: 'git',
+              tone: gitAvailable ? 'ok' : 'error',
+            }, gitAvailable ? t('config.gitReady') : t('config.gitMissing')),
+          ]),
+          h('div', { key: 'remote', className: 'dsh-sgs-field' }, [
+            h('label', { htmlFor: 'dsh-sgs-remote' }, t('config.remote')),
+            h('input', {
+              id: 'dsh-sgs-remote',
+              className: 'dsh-sgs-input',
+              value: form.remote,
+              placeholder: t('config.remotePlaceholder'),
+              spellCheck: false,
+              autoComplete: 'off',
+              onChange: updateForm('remote'),
+            }),
+          ]),
+          h('div', { key: 'grid', className: 'dsh-sgs-grid' }, [
+            h('div', { key: 'branch', className: 'dsh-sgs-field' }, [
+              h('label', { htmlFor: 'dsh-sgs-branch' }, t('config.branch')),
+              h('input', {
+                id: 'dsh-sgs-branch',
+                className: 'dsh-sgs-input',
+                value: form.branch,
+                spellCheck: false,
+                autoComplete: 'off',
+                onChange: updateForm('branch'),
+              }),
+            ]),
+            h('div', { key: 'author', className: 'dsh-sgs-field' }, [
+              h('label', { htmlFor: 'dsh-sgs-author' }, t('config.authorName')),
+              h('input', {
+                id: 'dsh-sgs-author',
+                className: 'dsh-sgs-input',
+                value: form.authorName,
+                spellCheck: false,
+                onChange: updateForm('authorName'),
+              }),
+            ]),
+          ]),
+          h('details', { key: 'advanced', className: 'dsh-sgs-details' }, [
+            h('summary', { key: 'summary' }, t('config.authorEmail')),
+            h('div', { key: 'email', className: 'dsh-sgs-field' }, [
+              h('label', { htmlFor: 'dsh-sgs-email' }, t('config.authorEmail')),
+              h('input', {
+                id: 'dsh-sgs-email',
+                className: 'dsh-sgs-input',
+                value: form.authorEmail,
+                spellCheck: false,
+                onChange: updateForm('authorEmail'),
+              }),
+            ]),
+          ]),
+          h('div', { key: 'actions', className: 'dsh-sgs-actions' }, [
+            h(Button, { key: 'save', type: 'submit', variant: 'primary', busy: busy === 'save' }, busy === 'save' ? t('config.saving') : t('config.save')),
+            h(Button, { key: 'test', busy: busy === 'test', disabled: !configured, onClick: testConnection }, busy === 'test' ? t('config.testing') : t('config.test')),
+            props.openPanel
+              ? h(Button, { key: 'open', variant: 'ghost', onClick: openPanel }, t('config.openPanel'))
+              : null,
+          ]),
+          configured
+            ? h('p', { key: 'hint', className: 'dsh-sgs-hint' }, `${t('config.repo')}: ${status?.repoDir || ''}`)
+            : h('p', { key: 'not', className: 'dsh-sgs-hint' }, t('config.notConfigured')),
+          status?.localFormatVersion
+            ? h('p', { key: 'format', className: 'dsh-sgs-hint' }, `${t('config.formatVersion')}: v${status.localFormatVersion}`)
+            : null,
+          h('p', { key: 'private', className: 'dsh-sgs-warning' }, t('page.safety')),
+          status?.configError ? h('p', { key: 'cfgerr', className: 'dsh-sgs-warning' }, t('config.configError')) : null,
+        ]),
       ])
     }
 
@@ -1048,13 +1291,30 @@ window.__ModuleLoader__.load({
         document.head.appendChild(style)
         return () => style.remove()
       }, 'session-git-sync: styles')
+      const layout = typeof ctx.get === 'function' ? ctx.get('layout') : undefined
+      const openPanel = layout && typeof layout.selectPanel === 'function'
+        ? () => layout.selectPanel(PANEL_ID)
+        : undefined
       ctx.effect(() => ctx.slots.inject('settings.section', () => ctx.slots.register({
         name: 'settings.section',
-        id: 'session-git-sync',
+        id: PANEL_ID,
         order: 18,
         label: () => t('nav.title'),
         locale: NS,
+        inject: () => ({ openPanel }),
       }, SessionGitSyncSection)), 'session-git-sync: settings page')
+      ctx.effect(() => ctx.slots.inject('main', () => ctx.slots.register({
+        name: 'main',
+        key: PANEL_ID,
+        locale: NS,
+      }, SessionGitSyncPanel)), 'session-git-sync: panel page')
+      ctx.effect(() => ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
+        name: 'sidebar.panellist',
+        id: PANEL_ID,
+        order: 20,
+        label: () => t('nav.title'),
+        locale: NS,
+      }, SyncPanelIcon)), 'session-git-sync: sidebar entry')
     }
 
     return { inject: ['slots', 'locale'], apply }
